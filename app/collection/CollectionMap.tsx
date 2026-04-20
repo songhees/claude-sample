@@ -5,12 +5,13 @@ import DeckGL from '@deck.gl/react'
 import { GeoJsonLayer, PathLayer } from '@deck.gl/layers'
 import { LightingEffect, DirectionalLight, MapView } from '@deck.gl/core'
 import type { Deck } from '@deck.gl/core'
+import { useTheme } from '../providers/ThemeProvider'
 
 // ─── 상수 ─────────────────────────────────────────────────────────────────────
 
 const COUNTRIES = '/geojson/geoJsonSample.json'
 
-const COLOR_SCALE: Record<string, [number, number, number]> = {
+const COLOR_SCALE_DARK: Record<string, [number, number, number]> = {
   '11': [143, 186, 255],
   '26': [143, 186, 255],
   '27': [143, 186, 255],
@@ -29,6 +30,7 @@ const COLOR_SCALE: Record<string, [number, number, number]> = {
   '50': [78,  109, 188],
   '51': [143, 186, 255],
 }
+
 
 const GYE = ['28', '41']
 
@@ -70,6 +72,23 @@ export default function CollectionMap() {
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const deckRef     = useRef<Deck | null>(null)
+
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
+
+  const COLOR_SCALE = COLOR_SCALE_DARK
+
+  const themeColors = {
+    mapBg:             isDark ? '#0a1232'              : '#dce8ff',
+    tabActiveBg:       isDark ? '#2f5bbd'              : '#2f5bbd',
+    tabInactiveBg:     isDark ? 'rgba(10,18,50,0.85)'  : 'rgba(220,232,255,0.90)',
+    tabActiveText:     '#ffffff',
+    tabInactiveText:   isDark ? '#8fb2ff'              : '#1e3a8a',
+    tabActiveBorder:   '#2f5bbd',
+    tabInactiveBorder: isDark ? '#2a3f7a'              : '#93b4e8',
+    controlText:       isDark ? '#8fb2ff'              : '#1e3a8a',
+    controlActiveText: '#ffffff',
+  }
 
   // GeoJSON → PathDatum 변환
   useEffect(() => {
@@ -136,7 +155,8 @@ export default function CollectionMap() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     getFillColor: (f: any) => {
       const cd: string = f?.properties?.CTPRVN_CD
-      return selectedCodes.includes(cd) ? (COLOR_SCALE[cd] ?? [30, 52, 138]) : [30, 52, 138]
+      const inactiveBase: [number, number, number] = isDark ? [30, 52, 138] : [100, 140, 210]
+      return selectedCodes.includes(cd) ? (COLOR_SCALE[cd] ?? inactiveBase) : inactiveBase
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     getElevation: (f: any) => {
@@ -144,7 +164,7 @@ export default function CollectionMap() {
       return selectedCodes.includes(cd) ? 10000 : 0
     },
     updateTriggers: {
-      getFillColor: selectedCodes,
+      getFillColor: [selectedCodes, theme],
       getElevation: selectedCodes,
     },
     pickable: true,
@@ -161,10 +181,14 @@ export default function CollectionMap() {
     id:   'path-layer',
     data: pathData,
     getPath:  f => selectedCodes.includes(f.CTPRVN_CD) ? f.path3D : f.path,
-    getColor: f => (selectedCodes.includes(f.CTPRVN_CD) ? [226, 237, 255] : [64, 88, 173]) as [number, number, number],
+    getColor: f => (
+      selectedCodes.includes(f.CTPRVN_CD)
+        ? (isDark ? [226, 237, 255] : [70, 115, 210])
+        : [64, 88, 173]
+    ) as [number, number, number],
     updateTriggers: {
       getPath:  selectedCodes,
-      getColor: selectedCodes,
+      getColor: [selectedCodes, theme],
     },
     getWidth:      1,
     widthMinPixels: 1,
@@ -176,7 +200,7 @@ export default function CollectionMap() {
   const layers = pathData.length > 0 ? [geoJsonLayer, pathLayer] : [geoJsonLayer]
 
   return (
-    <div style={{ position: 'relative', width: '100vw', height: '100vh', background: '#0a1232' }}>
+    <div style={{ position: 'relative', width: '100vw', height: '100vh', background: themeColors.mapBg }}>
 
       {/* DeckGL 지도 */}
       <DeckGL
@@ -218,9 +242,9 @@ export default function CollectionMap() {
                   borderRadius: 4,
                   fontSize: 12,
                   fontWeight: activeTab === i ? 700 : 400,
-                  color: activeTab === i ? '#fff' : '#8fb2ff',
-                  background: activeTab === i ? '#2f5bbd' : 'rgba(10,18,50,0.85)',
-                  border: `1px solid ${activeTab === i ? '#2f5bbd' : '#2a3f7a'}`,
+                  color: activeTab === i ? themeColors.tabActiveText : themeColors.tabInactiveText,
+                  background: activeTab === i ? themeColors.tabActiveBg : themeColors.tabInactiveBg,
+                  border: `1px solid ${activeTab === i ? themeColors.tabActiveBorder : themeColors.tabInactiveBorder}`,
                   textDecoration: 'none',
                   cursor: 'pointer',
                   transition: 'all 0.2s',
@@ -247,10 +271,10 @@ export default function CollectionMap() {
               key={label}
               onClick={onClick}
               style={{
-                background: active ? '#2f5bbd' : 'rgba(10,18,50,0.85)',
-                border: `1px solid ${active ? '#2f5bbd' : '#2a3f7a'}`,
+                background: active ? themeColors.tabActiveBg : themeColors.tabInactiveBg,
+                border: `1px solid ${active ? themeColors.tabActiveBorder : themeColors.tabInactiveBorder}`,
                 borderRadius: 4,
-                color: '#8fb2ff',
+                color: active ? themeColors.controlActiveText : themeColors.controlText,
                 padding: '5px 14px',
                 cursor: 'pointer',
                 fontSize: 16,
